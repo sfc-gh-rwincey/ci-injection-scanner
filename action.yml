@@ -1,0 +1,69 @@
+name: 'CI Injection Scanner'
+description: >
+  Detects CI/CD expression injection vulnerabilities in GitHub Actions workflows,
+  Jenkinsfiles, shell scripts, and Makefiles. Uses an optional LLM judge (via
+  GitHub Models) to eliminate false positives.
+
+author: 'Snowflake Security'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan (defaults to repository root $GITHUB_WORKSPACE)'
+    required: false
+    default: '.'
+  fail-on-severity:
+    description: >
+      Minimum severity level that causes the action to fail.
+      One of: HIGH, MEDIUM, LOW, none.
+    required: false
+    default: 'HIGH'
+  use-llm-judge:
+    description: >
+      Run LLM judge (GitHub Models) to reduce false positives.
+      Requires GITHUB_TOKEN with models:read permission (automatic in Actions).
+    required: false
+    default: 'true'
+  judge-model:
+    description: >
+      GitHub Models model to use for the LLM judge.
+      Defaults to gpt-4o-mini (fast, cheap). Use gpt-4o or claude-3-5-sonnet
+      for higher accuracy on complex findings.
+    required: false
+    default: 'gpt-4o-mini'
+  github-token:
+    description: 'GitHub token for Models API access and PR annotations.'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  findings-count:
+    description: 'Number of confirmed findings (after LLM judge filtering).'
+  verdict:
+    description: '"clean" or "findings"'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pip install -q openai>=1.0
+
+    - name: Run CI injection scan
+      shell: bash
+      run: python "${{ github.action_path }}/src/main.py"
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        FAIL_ON_SEVERITY: ${{ inputs.fail-on-severity }}
+        USE_LLM_JUDGE: ${{ inputs.use-llm-judge }}
+        JUDGE_MODEL: ${{ inputs.judge-model }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
