@@ -19,7 +19,7 @@ _src = Path(__file__).parent
 if str(_src) not in sys.path:
     sys.path.insert(0, str(_src))
 
-from judge import JudgeVerdict, judge_findings
+from judge import JudgeVerdict, _fallback_judgements, judge_findings
 from scanner import scan_directory
 
 _SEVERITY_ORDER = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
@@ -122,7 +122,6 @@ def main() -> int:
     else:
         if use_judge and not github_token:
             print("::warning::GITHUB_TOKEN not set — skipping LLM judge, treating all findings as TRUE_POSITIVE")
-        from judge import JudgeVerdict, _fallback_judgements
         judged = _fallback_judgements(result.findings)
 
     confirmed = [f for f in judged if f.verdict == JudgeVerdict.TRUE_POSITIVE]
